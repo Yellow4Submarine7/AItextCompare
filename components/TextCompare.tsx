@@ -102,22 +102,7 @@ export default function TextCompare() {
 
     if (words.length > selectedWords.length * 2) {
       // 如果返回的文本长度超过选中文本的两倍，尝试缩小范围
-      let bestStart = 0;
-      let bestEnd = words.length;
-      let bestScore = 0;
-
-      for (let i = 0; i < words.length - selectedWords.length + 1; i++) {
-        const subPhrase = words.slice(i, i + selectedWords.length).join(' ');
-        // 删除 calculateSimilarity 函数调用
-        // const score = calculateSimilarity(subPhrase, selectedText);
-        // if (score > bestScore) {
-        //     bestScore = score;
-        //     bestStart = i;
-        //     bestEnd = i + selectedWords.length;
-        // }
-      }
-
-      const refinedText = words.slice(bestStart, bestEnd).join(' ');
+      const refinedText = words.slice(0, selectedWords.length).join(' ');
       const startOffset = result.similar_text.indexOf(refinedText);
       return {
         ...result,
@@ -149,9 +134,6 @@ export default function TextCompare() {
     const results = fuse.search(processedPattern);
 
     if (results.length > 0) {
-      // 删除未使用的 bestMatch 变量
-      // const bestMatch = results[0];
-
       // 使用字符串搜索来找到匹配的位置
       const index = text.indexOf(pattern);
 
