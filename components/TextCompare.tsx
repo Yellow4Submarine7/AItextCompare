@@ -5,6 +5,7 @@ import Fuse from 'fuse.js';
 import ColorPicker from './ColorPicker';
 
 interface Highlight {
+  id: number;
   start: number;
   end: number;
   color: string;
@@ -26,7 +27,7 @@ interface Match {
 }
 
 export default function TextCompare() {
-  const defaultLeftText = `在一个遥远的小村庄里，住着一位老木匠。他的手艺精湛，村里几乎所有的家具都出自他的手。一天天过去，他年纪越来越大，手也不再那么灵活了。有一天，一个年轻人来找他，想跟他学习木匠的技艺。老木匠看了看年轻人，问道："你为什么想学这门手艺？"年轻人回答道："因为我想和您一样，能创造出那么精美的家具。"老木匠笑了笑，说："手艺不仅仅是做东西，更是一种生活的态度。"于是，老木匠决定教他，年轻人从那天起，每天都到老木匠的作坊里学。几年后，年轻人成为了村里最好的木匠，而老木匠则在看到年轻人的成就后，安心地退休了。`;
+  const defaultLeftText = `在一个遥远的小村庄里，住着一位老木匠。他的手艺精湛，村里几乎所有的家具都出自他的手。一天天过去，他年纪越来越大，手也不再那么灵活了。有一天，一个年轻人来找他，想跟他学习木匠的技艺。老木匠看了看年轻人，问道："你为什么想学这门手艺？"年轻人回答道："因为我想和您一样，能创造出那么精美的家具。"老木匠笑了笑，说："手艺不仅仅是做东西，更是一种生活的态度。"于是，老木匠决定教他，年轻人从那天起，每天都到老木匠的作坊里学习。几年后，年轻人成为了村里最好的木匠，而老木匠则在看到年轻人的成就后，安心地退休了。`;
   const defaultRightText = `在一个宁静偏远的小村庄里，住着一位技艺精湛的老木匠。他拥有无与伦比的技艺，村里几乎所有的家具都出自他的巧手。岁月流逝，他的年纪渐渐增长，曾经灵活的双手如今变得有些笨拙。
 
 一天，一位年轻人前来拜访，恳求能向他学习这门精湛的木匠技艺。老木匠端详着年轻人，平静地问："你为什么想学这门手艺？"
@@ -49,6 +50,7 @@ export default function TextCompare() {
   const leftBackdropRef = useRef<HTMLDivElement>(null);
   const rightBackdropRef = useRef<HTMLDivElement>(null);
   const [isClearMode, setIsClearMode] = useState(false);
+  const [highlightCounter, setHighlightCounter] = useState(0); // 高亮计数器
 
   const handleTextChange = (side: 'left' | 'right', value: string) => {
     if (side === 'left') {
@@ -77,11 +79,58 @@ export default function TextCompare() {
       }
 
       const result = await response.json();
-      return result; // 预期格式为 { similar_text: '...', start: ..., end: ..., explanation: '...' }
+
+      if (result) {
+        // 后处理步骤
+        const refinedResult = refineAIResult(result, selectedText);
+        return refinedResult;
+      }
+
+      return null;
     } catch (error) {
       console.error('API调用错误:', error);
       return null;
     }
+  };
+
+  const refineAIResult = (result: Match, selectedText: string): Match => {
+    const words = result.similar_text.split(/\s+/);
+    const selectedWords = selectedText.split(/\s+/);
+
+    if (words.length > selectedWords.length * 2) {
+      // 如果返回的文本长度超过选中文本的两倍，尝试缩小范围
+      let bestStart = 0;
+      let bestEnd = words.length;
+      let bestScore = 0;
+
+      for (let i = 0; i < words.length - selectedWords.length + 1; i++) {
+        const subPhrase = words.slice(i, i + selectedWords.length).join(' ');
+        const score = calculateSimilarity(subPhrase, selectedText);
+        if (score > bestScore) {
+          bestScore = score;
+          bestStart = i;
+          bestEnd = i + selectedWords.length;
+        }
+      }
+
+      const refinedText = words.slice(bestStart, bestEnd).join(' ');
+      const startOffset = result.similar_text.indexOf(refinedText);
+      return {
+        ...result,
+        similar_text: refinedText,
+        start: result.start + startOffset,
+        end: result.start + startOffset + refinedText.length,
+      };
+    }
+
+    return result;
+  };
+
+  const calculateSimilarity = (text1: string, text2: string): number => {
+    // 这里可以实现一个简单的相似度计算函数
+    // 例如，可以使用 Levenshtein 距离或其他字符串相似度算法
+    // 这里仅作为示例，返回一个随机值
+    return Math.random();
   };
 
   // 使用模糊匹配在目标文本中查找相似文本的位置
@@ -118,7 +167,7 @@ export default function TextCompare() {
         if (index !== -1) {
           return { start: index, end: index + pattern.length };
         } else {
-          console.error('在目标文本中未找相似的文本段');
+          console.error('在目标文本中未��相似的文本段');
           return { start: -1, end: -1 };
         }
       }
@@ -138,12 +187,38 @@ export default function TextCompare() {
     setSelectedColor('#FFFFFF');
   };
 
+  // 新增工具函数
+  const codeUnitIndexToCodePointIndex = (text: string, codeUnitIndex: number) => {
+    return Array.from(text.slice(0, codeUnitIndex)).length;
+  };
+
+  const codePointIndexToCodeUnitIndex = (text: string, codePointIndex: number) => {
+    let count = 0;
+    let index = 0;
+    while (count < codePointIndex && index < text.length) {
+      const codePoint = text.codePointAt(index)!;
+      index += codePoint > 0xffff ? 2 : 1; // 代理对占两个代码单元
+      count++;
+    }
+    return index;
+  };
+
   const applyHighlight = async (side: 'left' | 'right') => {
     const textareaRef = side === 'left' ? leftTextareaRef : rightTextareaRef;
 
     if (textareaRef.current) {
-      const start = textareaRef.current.selectionStart;
-      const end = textareaRef.current.selectionEnd;
+      const selectionStart = textareaRef.current.selectionStart;
+      const selectionEnd = textareaRef.current.selectionEnd;
+
+      // 将代码单元索引转换为字符索引
+      const start = codeUnitIndexToCodePointIndex(
+        side === 'left' ? leftText : rightText,
+        selectionStart
+      );
+      const end = codeUnitIndexToCodePointIndex(
+        side === 'left' ? leftText : rightText,
+        selectionEnd
+      );
 
       if (start !== end) {
         if (isClearMode) {
@@ -152,21 +227,30 @@ export default function TextCompare() {
           setHighlights(prev => prev.filter(h => h.start >= end || h.end <= start));
         } else if (selectedColor !== '#FFFFFF') {
           // 正常高亮模式
-          const selectedText = (side === 'left' ? leftText : rightText).substring(start, end);
-          const newHighlight = { start, end, color: selectedColor };
+          const textArray = Array.from(side === 'left' ? leftText : rightText);
+          const selectedText = textArray.slice(start, end).join('');
+
+          // 生成唯一的 id
+          const newId = highlightCounter + 1;
+          setHighlightCounter(newId);
+
+          const newHighlight = { id: newId, start, end, color: selectedColor };
 
           // 更新当前侧的高亮
           const setHighlights = side === 'left' ? setLeftHighlights : setRightHighlights;
           setHighlights(prev => [...prev, newHighlight]);
 
           // 添加选中的文本到控制台
-          setConsoleMessages(prev => [...prev, {
-            type: 'selected',
-            side,
-            text: selectedText,
-            start,
-            end
-          }]);
+          setConsoleMessages(prev => [
+            ...prev,
+            {
+              type: 'selected',
+              side,
+              text: selectedText,
+              start,
+              end,
+            },
+          ]);
 
           // 查找并高亮另一侧的相似文本段
           const similarResult = await findSimilarSentence(side, selectedText);
@@ -199,7 +283,12 @@ export default function TextCompare() {
             const { start: matchStart, end: matchEnd } = findSimilarTextPosition(targetText, similarResult.similar_text);
 
             if (matchStart !== -1 && matchEnd !== -1) {
+              // 生成唯一的 id
+              const otherNewId = highlightCounter + 1;
+              setHighlightCounter(otherNewId);
+
               setOtherHighlights(prev => [...prev, {
+                id: otherNewId,
                 start: matchStart,
                 end: matchEnd,
                 color: selectedColor
@@ -273,54 +362,84 @@ export default function TextCompare() {
   };
 
   useEffect(() => {
-    const mergeHighlights = (highlights: Highlight[]) => {
-      if (highlights.length === 0) return [];
+    const getHighlightedSegments = (textArray: string[], highlights: Highlight[]) => {
+      if (highlights.length === 0) return [{ start: 0, end: textArray.length, color: null }];
 
-      // 按开始索引排序高亮数组
-      const sorted = [...highlights].sort((a, b) => a.start - b.start);
+      type Boundary = { pos: number; color: string | null; type: 'start' | 'end'; order: number; id: number };
 
-      const merged = [sorted[0]];
+      const boundaries: Boundary[] = [];
 
-      for (let i = 1; i < sorted.length; i++) {
-        const prev = merged[merged.length - 1];
-        const current = sorted[i];
+      highlights.forEach((highlight) => {
+        boundaries.push({ pos: highlight.start, color: highlight.color, type: 'start', order: highlight.id, id: highlight.id });
+        boundaries.push({ pos: highlight.end, color: highlight.color, type: 'end', order: highlight.id, id: highlight.id });
+      });
 
-        if (current.start <= prev.end) {
-          // 重叠或相邻，合并
-          prev.end = Math.max(prev.end, current.end);
-          // 这里保留第一个高亮的颜色，如果需要可以修改这个逻辑
-        } else {
-          merged.push(current);
+      boundaries.sort((a, b) => {
+        if (a.pos !== b.pos) return a.pos - b.pos;
+        if (a.type !== b.type) return a.type === 'end' ? -1 : 1; // 'end' 在前
+        return a.order - b.order; // 先添加的高亮在前
+      });
+
+      const segments = [];
+      let lastPos = 0;
+      let activeHighlights: Boundary[] = [];
+
+      for (let i = 0; i < boundaries.length; i++) {
+        const boundary = boundaries[i];
+
+        if (boundary.pos > lastPos) {
+          const currentColor = activeHighlights.length > 0 ? activeHighlights[activeHighlights.length - 1].color : null;
+          segments.push({
+            start: lastPos,
+            end: boundary.pos,
+            color: currentColor,
+          });
         }
+
+        if (boundary.type === 'start') {
+          activeHighlights.push(boundary);
+        } else {
+          const index = activeHighlights.findIndex(b => b.id === boundary.id && b.type === 'start');
+          if (index !== -1) {
+            activeHighlights.splice(index, 1);
+          }
+        }
+
+        lastPos = boundary.pos;
       }
 
-      return merged;
+      if (lastPos < textArray.length) {
+        const currentColor = activeHighlights.length > 0 ? activeHighlights[activeHighlights.length - 1].color : null;
+        segments.push({
+          start: lastPos,
+          end: textArray.length,
+          color: currentColor,
+        });
+      }
+
+      return segments;
     };
 
     const applyHighlights = (text: string, highlights: Highlight[], backdrop: HTMLDivElement | null) => {
       if (!backdrop) return;
 
-      const mergedHighlights = mergeHighlights(highlights);
+      const textArray = Array.from(text); // 将字符串转换为字符数组
+
+      const segments = getHighlightedSegments(textArray, highlights);
 
       let highlightedText = '';
-      let pos = 0;
 
-      mergedHighlights.forEach((highlight, index) => {
-        // 添加高亮前的文本
-        const beforeHighlight = text.substring(pos, highlight.start);
-        highlightedText += escapeHtml(beforeHighlight);
+      segments.forEach((segment, index) => {
+        const segmentChars = textArray.slice(segment.start, segment.end);
+        const segmentText = segmentChars.join('');
+        const escapedText = escapeHtml(segmentText);
 
-        // 添加高亮的文本
-        const highlightedPart = text.substring(highlight.start, highlight.end);
-        highlightedText += `<mark id="highlight-${index}" style="background-color: ${highlight.color}; color: inherit;">${escapeHtml(highlightedPart)}</mark>`;
-
-        // 更新当前位置
-        pos = highlight.end;
+        if (segment.color) {
+          highlightedText += `<mark id="highlight-${index}" style="background-color: ${segment.color}; color: inherit;">${escapedText}</mark>`;
+        } else {
+          highlightedText += escapedText;
+        }
       });
-
-      // 添加最后一个高亮之后的文本
-      const afterLastHighlight = text.substring(pos);
-      highlightedText += escapeHtml(afterLastHighlight);
 
       // 处理换行符
       backdrop.innerHTML = highlightedText.replace(/\n/g, '<br/>');
