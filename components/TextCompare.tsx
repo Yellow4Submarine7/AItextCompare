@@ -273,21 +273,44 @@ export default function TextCompare() {
   };
 
   useEffect(() => {
+    const mergeHighlights = (highlights: Highlight[]) => {
+      if (highlights.length === 0) return [];
+
+      // 按开始索引排序高亮数组
+      const sorted = [...highlights].sort((a, b) => a.start - b.start);
+
+      const merged = [sorted[0]];
+
+      for (let i = 1; i < sorted.length; i++) {
+        const prev = merged[merged.length - 1];
+        const current = sorted[i];
+
+        if (current.start <= prev.end) {
+          // 重叠或相邻，合并
+          prev.end = Math.max(prev.end, current.end);
+          // 这里保留第一个高亮的颜色，如果需要可以修改这个逻辑
+        } else {
+          merged.push(current);
+        }
+      }
+
+      return merged;
+    };
+
     const applyHighlights = (text: string, highlights: Highlight[], backdrop: HTMLDivElement | null) => {
       if (!backdrop) return;
 
-      // 按开始索引排序高亮数组
-      const sortedHighlights = [...highlights].sort((a, b) => a.start - b.start);
+      const mergedHighlights = mergeHighlights(highlights);
 
       let highlightedText = '';
       let pos = 0;
 
-      sortedHighlights.forEach((highlight, index) => {
+      mergedHighlights.forEach((highlight, index) => {
         // 添加高亮前的文本
         const beforeHighlight = text.substring(pos, highlight.start);
         highlightedText += escapeHtml(beforeHighlight);
 
-        // 添加高亮的文本，添加唯一的 id
+        // 添加高亮的文本
         const highlightedPart = text.substring(highlight.start, highlight.end);
         highlightedText += `<mark id="highlight-${index}" style="background-color: ${highlight.color}; color: inherit;">${escapeHtml(highlightedPart)}</mark>`;
 
