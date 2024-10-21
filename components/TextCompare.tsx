@@ -1,8 +1,10 @@
+// TextCompare.tsx
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
 import Fuse from 'fuse.js';
 import ColorPicker from './ColorPicker';
+import RunningCatIcon from './RunningCatIcon'; // 导入 RunningCatIcon 组件
 
 interface Highlight {
   id: number;
@@ -13,7 +15,7 @@ interface Highlight {
 
 interface ConsoleMessage {
   type: 'selected' | 'highlighted';
-  side: 'left' | 'right';
+  side: 'left' | 'right' | 'AI 请求' | 'AI 响应';
   text: string;
   start: number;
   end: number;
@@ -51,6 +53,7 @@ export default function TextCompare() {
   const rightBackdropRef = useRef<HTMLDivElement>(null);
   const [isClearMode, setIsClearMode] = useState(false);
   const [highlightCounter, setHighlightCounter] = useState(0); // 高亮计数器
+  const [isLoading, setIsLoading] = useState(false); // 新增加载状态
 
   const handleTextChange = (side: 'left' | 'right', value: string) => {
     if (side === 'left') {
@@ -167,7 +170,7 @@ export default function TextCompare() {
         if (index !== -1) {
           return { start: index, end: index + pattern.length };
         } else {
-          console.error('在目标文本中未��相似的文本段');
+          console.error('在目标文本中未找到相似的文本段');
           return { start: -1, end: -1 };
         }
       }
@@ -252,8 +255,14 @@ export default function TextCompare() {
             },
           ]);
 
+          // 设置加载状态为 true
+          setIsLoading(true);
+
           // 查找并高亮另一侧的相似文本段
           const similarResult = await findSimilarSentence(side, selectedText);
+
+          // 请求完成后设置加载状态为 false
+          setIsLoading(false);
 
           // 添加 AI 请求和响应到控制台
           setConsoleMessages(prev => [
@@ -450,17 +459,28 @@ export default function TextCompare() {
   }, [leftText, rightText, leftHighlights, rightHighlights]);
 
   return (
-    <div className="flex flex-col space-y-4 font-sans">
+    <div className="flex flex-col space-y-4 font-sans p-4">
+      {/* 控制栏：颜色选择器、按钮和小猫图标 */}
       <div className="flex justify-between items-center">
-        <ColorPicker 
-          selectedColor={selectedColor} 
-          onColorChange={handleColorChange}
-          onClearHighlight={handleClearHighlight}
-        />
-        <div>
+        {/* 左侧：颜色选择器 */}
+        <div className="flex-none">
+          <ColorPicker 
+            selectedColor={selectedColor} 
+            onColorChange={handleColorChange}
+            onClearHighlight={handleClearHighlight}
+          />
+        </div>
+
+        {/* 中央：小猫图标 */}
+        <div className="flex-1 flex justify-center">
+          <RunningCatIcon isRunning={isLoading} />
+        </div>
+
+        {/* 右侧：按钮 */}
+        <div className="flex space-x-2">
           <button 
             onClick={clearAllHighlights}
-            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors mr-2"
+            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
           >
             清空所有高亮
           </button>
@@ -472,11 +492,14 @@ export default function TextCompare() {
           </button>
         </div>
       </div>
+
       {showNotification && (
         <div className="fixed top-4 right-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded shadow-md">
           未找到相似的句子
         </div>
       )}
+
+      {/* 文本对比区域 */}
       <div className="flex space-x-4">
         {['left', 'right'].map((side) => (
           <div key={side} className="w-1/2 relative h-96">
@@ -506,12 +529,19 @@ export default function TextCompare() {
           </div>
         ))}
       </div>
+
       {/* 控制台部分 */}
       <div className="mt-4 p-4 bg-gray-100 rounded-lg max-h-60 overflow-auto">
         <h3 className="font-bold mb-2">控制台</h3>
         {consoleMessages.map((message, index) => (
           <div key={index} className="mb-2">
-            <span className="font-semibold">{message.type === 'selected' ? '选中' : message.type === 'highlighted' ? '高亮' : message.side}: </span>
+            <span className="font-semibold">
+              {message.type === 'selected' 
+                ? '选中' 
+                : message.type === 'highlighted' 
+                  ? '高亮' 
+                  : message.type}:
+            </span>{' '}
             <span>{message.text}</span>
             {message.start !== 0 && message.end !== 0 && (
               <span className="text-gray-500"> (开始: {message.start}, 结束: {message.end})</span>
