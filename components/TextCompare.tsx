@@ -26,8 +26,19 @@ interface Match {
 }
 
 export default function TextCompare() {
-  const [leftText, setLeftText] = useState('');
-  const [rightText, setRightText] = useState('');
+  const defaultLeftText = `在一个遥远的小村庄里，住着一位老木匠。他的手艺精湛，村里几乎所有的家具都出自他的手。一天天过去，他年纪越来越大，手也不再那么灵活了。有一天，一个年轻人来找他，想跟他学习木匠的技艺。老木匠看了看年轻人，问道："你为什么想学这门手艺？"年轻人回答道："因为我想和您一样，能创造出那么精美的家具。"老木匠笑了笑，说："手艺不仅仅是做东西，更是一种生活的态度。"于是，老木匠决定教他，年轻人从那天起，每天都到老木匠的作坊里学。几年后，年轻人成为了村里最好的木匠，而老木匠则在看到年轻人的成就后，安心地退休了。`;
+  const defaultRightText = `在一个宁静偏远的小村庄里，住着一位技艺精湛的老木匠。他拥有无与伦比的技艺，村里几乎所有的家具都出自他的巧手。岁月流逝，他的年纪渐渐增长，曾经灵活的双手如今变得有些笨拙。
+
+一天，一位年轻人前来拜访，恳求能向他学习这门精湛的木匠技艺。老木匠端详着年轻人，平静地问："你为什么想学这门手艺？"
+
+年轻人回答："Because I want to be like you and create such exquisite furniture."
+
+老木匠微笑着说："手艺不仅是制造物件，它更是一种生活态度。"
+
+老木匠决定收下他为徒。从那天起，年轻人每天都准时到作坊勤奋学习。数年后，年轻人成为村中最杰出的木匠，而老木匠在见证他的成就后，心满意足地退休了。`;
+
+  const [leftText, setLeftText] = useState(defaultLeftText);
+  const [rightText, setRightText] = useState(defaultRightText);
   const [leftHighlights, setLeftHighlights] = useState<Highlight[]>([]);
   const [rightHighlights, setRightHighlights] = useState<Highlight[]>([]);
   const [selectedColor, setSelectedColor] = useState('#FFFFFF');
@@ -37,6 +48,7 @@ export default function TextCompare() {
   const rightTextareaRef = useRef<HTMLTextAreaElement>(null);
   const leftBackdropRef = useRef<HTMLDivElement>(null);
   const rightBackdropRef = useRef<HTMLDivElement>(null);
+  const [isClearMode, setIsClearMode] = useState(false);
 
   const handleTextChange = (side: 'left' | 'right', value: string) => {
     if (side === 'left') {
@@ -106,7 +118,7 @@ export default function TextCompare() {
         if (index !== -1) {
           return { start: index, end: index + pattern.length };
         } else {
-          console.error('在目标文本中未找到相似的文本段');
+          console.error('在目标文本中未找相似的文本段');
           return { start: -1, end: -1 };
         }
       }
@@ -116,6 +128,16 @@ export default function TextCompare() {
     }
   };
 
+  const handleColorChange = (color: string) => {
+    setSelectedColor(color);
+    setIsClearMode(false);
+  };
+
+  const handleClearHighlight = () => {
+    setIsClearMode(true);
+    setSelectedColor('#FFFFFF');
+  };
+
   const applyHighlight = async (side: 'left' | 'right') => {
     const textareaRef = side === 'left' ? leftTextareaRef : rightTextareaRef;
 
@@ -123,93 +145,96 @@ export default function TextCompare() {
       const start = textareaRef.current.selectionStart;
       const end = textareaRef.current.selectionEnd;
 
-      if (start !== end && selectedColor !== '#FFFFFF') {
-        const selectedText = (side === 'left' ? leftText : rightText).substring(start, end);
-        const newHighlight = { start, end, color: selectedColor };
+      if (start !== end) {
+        if (isClearMode) {
+          // 清除模式：移除选中区域的高亮
+          const setHighlights = side === 'left' ? setLeftHighlights : setRightHighlights;
+          setHighlights(prev => prev.filter(h => h.start >= end || h.end <= start));
+        } else if (selectedColor !== '#FFFFFF') {
+          // 正常高亮模式
+          const selectedText = (side === 'left' ? leftText : rightText).substring(start, end);
+          const newHighlight = { start, end, color: selectedColor };
 
-        // 更新当前侧的高亮
-        const setHighlights = side === 'left' ? setLeftHighlights : setRightHighlights;
-        setHighlights(prev => [...prev, newHighlight]);
+          // 更新当前侧的高亮
+          const setHighlights = side === 'left' ? setLeftHighlights : setRightHighlights;
+          setHighlights(prev => [...prev, newHighlight]);
 
-        // 添加选中的文本到控制台
-        setConsoleMessages(prev => [...prev, {
-          type: 'selected',
-          side,
-          text: selectedText,
-          start,
-          end
-        }]);
+          // 添加选中的文本到控制台
+          setConsoleMessages(prev => [...prev, {
+            type: 'selected',
+            side,
+            text: selectedText,
+            start,
+            end
+          }]);
 
-        // 查找并高亮另一侧的相似文本段
-        const similarResult = await findSimilarSentence(side, selectedText);
+          // 查找并高亮另一侧的相似文本段
+          const similarResult = await findSimilarSentence(side, selectedText);
 
-        // 添加 AI 请求和响应到控制台
-        setConsoleMessages(prev => [
-          ...prev,
-          {
-            type: 'info',
-            side: 'AI 请求',
-            text: JSON.stringify({ sourceText: side === 'left' ? leftText : rightText, targetText: side === 'left' ? rightText : leftText, selectedText }),
-            start: 0,
-            end: 0,
-          },
-          {
-            type: 'info',
-            side: 'AI 响应',
-            text: JSON.stringify(similarResult),
-            start: 0,
-            end: 0,
-          },
-        ]);
-
-        if (similarResult && similarResult.similar_text) {
-          const otherSide = side === 'left' ? 'right' : 'left';
-          const setOtherHighlights = otherSide === 'left' ? setLeftHighlights : setRightHighlights;
-          const targetText = otherSide === 'left' ? leftText : rightText;
-
-          // 使用 findSimilarTextPosition 找到相似文本的位置
-          const { start: matchStart, end: matchEnd } = findSimilarTextPosition(targetText, similarResult.similar_text);
-
-          if (matchStart !== -1 && matchEnd !== -1) {
-            setOtherHighlights(prev => [...prev, {
-              start: matchStart,
-              end: matchEnd,
-              color: selectedColor
-            }]);
-
-            // 添加高亮的文本到控制台
-            setConsoleMessages(prev => [...prev, {
+          // 添加 AI 请求和响应到控制台
+          setConsoleMessages(prev => [
+            ...prev,
+            {
+              type: 'selected',
+              side: 'AI 请求',
+              text: JSON.stringify({ sourceText: side === 'left' ? leftText : rightText, targetText: side === 'left' ? rightText : leftText, selectedText }),
+              start: 0,
+              end: 0,
+            },
+            {
               type: 'highlighted',
-              side: otherSide,
-              text: targetText.substring(matchStart, matchEnd),
-              start: matchStart,
-              end: matchEnd
-            }]);
+              side: 'AI 响应',
+              text: JSON.stringify(similarResult),
+              start: 0,
+              end: 0,
+            },
+          ]);
 
-            // 滚动到新高亮的位置
-            setTimeout(() => {
-              const backdropRef = otherSide === 'left' ? leftBackdropRef.current : rightBackdropRef.current;
-              if (backdropRef) {
-                const highlightElements = backdropRef.querySelectorAll('mark');
-                const lastHighlight = highlightElements[highlightElements.length - 1] as HTMLElement;
-                if (lastHighlight) {
-                  lastHighlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          if (similarResult && similarResult.similar_text) {
+            const otherSide = side === 'left' ? 'right' : 'left';
+            const setOtherHighlights = otherSide === 'left' ? setLeftHighlights : setRightHighlights;
+            const targetText = otherSide === 'left' ? leftText : rightText;
+
+            // 使用 findSimilarTextPosition 找到相似文本的位置
+            const { start: matchStart, end: matchEnd } = findSimilarTextPosition(targetText, similarResult.similar_text);
+
+            if (matchStart !== -1 && matchEnd !== -1) {
+              setOtherHighlights(prev => [...prev, {
+                start: matchStart,
+                end: matchEnd,
+                color: selectedColor
+              }]);
+
+              // 添加高亮的文本到控制台
+              setConsoleMessages(prev => [...prev, {
+                type: 'highlighted',
+                side: otherSide,
+                text: targetText.substring(matchStart, matchEnd),
+                start: matchStart,
+                end: matchEnd
+              }]);
+
+              // 滚动到新高亮的位置
+              setTimeout(() => {
+                const backdropRef = otherSide === 'left' ? leftBackdropRef.current : rightBackdropRef.current;
+                if (backdropRef) {
+                  const highlightElements = backdropRef.querySelectorAll('mark');
+                  const lastHighlight = highlightElements[highlightElements.length - 1] as HTMLElement;
+                  if (lastHighlight) {
+                    lastHighlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
                 }
-              }
-            }, 0);
+              }, 0);
+            } else {
+              console.error('在目标文本中未找到相似的文本段');
+              setShowNotification(true);
+              setTimeout(() => setShowNotification(false), 3000);
+            }
           } else {
-            console.error('在目标文本中未找到相似的文本段');
             setShowNotification(true);
-            setTimeout(() => setShowNotification(false), 3000);
+            setTimeout(() => setShowNotification(false), 3000); // 3秒后隐藏通知
           }
-        } else {
-          setShowNotification(true);
-          setTimeout(() => setShowNotification(false), 3000); // 3秒后隐藏通知
         }
-      } else if (selectedColor === '#FFFFFF') {
-        // 如果选择了白色，移除选中文本的高亮
-        const setHighlights = side === 'left' ? setLeftHighlights : setRightHighlights;
-        setHighlights(prev => prev.filter(h => h.start > end || h.end < start));
       }
     }
   };
@@ -237,6 +262,14 @@ export default function TextCompare() {
           return match;
       }
     });
+  };
+
+  const resetTexts = () => {
+    setLeftText(defaultLeftText);
+    setRightText(defaultRightText);
+    setLeftHighlights([]);
+    setRightHighlights([]);
+    setConsoleMessages([]);
   };
 
   useEffect(() => {
@@ -277,13 +310,25 @@ export default function TextCompare() {
   return (
     <div className="flex flex-col space-y-4 font-sans">
       <div className="flex justify-between items-center">
-        <ColorPicker selectedColor={selectedColor} onColorChange={setSelectedColor} />
-        <button 
-          onClick={clearAllHighlights}
-          className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-        >
-          清空所有高亮
-        </button>
+        <ColorPicker 
+          selectedColor={selectedColor} 
+          onColorChange={handleColorChange}
+          onClearHighlight={handleClearHighlight}
+        />
+        <div>
+          <button 
+            onClick={clearAllHighlights}
+            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors mr-2"
+          >
+            清空所有高亮
+          </button>
+          <button 
+            onClick={resetTexts}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+          >
+            重置文本
+          </button>
+        </div>
       </div>
       {showNotification && (
         <div className="fixed top-4 right-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded shadow-md">
