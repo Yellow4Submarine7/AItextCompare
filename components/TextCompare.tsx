@@ -129,7 +129,7 @@ export default function TextCompare() {
     return result;
   };
 
-  const calculateSimilarity = (text1: string, text2: string): number => {
+  const calculateSimilarity = (): number => {
     // 这里可以实现一个简单的相似度计算函数
     // 例如，可以使用 Levenshtein 距离或其他字符串相似度算法
     // 这里仅作为示例，返回一个随机值
@@ -193,17 +193,6 @@ export default function TextCompare() {
   // 新增工具函数
   const codeUnitIndexToCodePointIndex = (text: string, codeUnitIndex: number) => {
     return Array.from(text.slice(0, codeUnitIndex)).length;
-  };
-
-  const codePointIndexToCodeUnitIndex = (text: string, codePointIndex: number) => {
-    let count = 0;
-    let index = 0;
-    while (count < codePointIndex && index < text.length) {
-      const codePoint = text.codePointAt(index)!;
-      index += codePoint > 0xffff ? 2 : 1; // 代理对占两个代码单元
-      count++;
-    }
-    return index;
   };
 
   const applyHighlight = async (side: 'left' | 'right') => {
@@ -391,7 +380,7 @@ export default function TextCompare() {
 
       const segments = [];
       let lastPos = 0;
-      let activeHighlights: Boundary[] = [];
+      const activeHighlights: Boundary[] = [];
 
       for (let i = 0; i < boundaries.length; i++) {
         const boundary = boundaries[i];

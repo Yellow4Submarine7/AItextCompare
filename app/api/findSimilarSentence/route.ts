@@ -43,8 +43,8 @@ export async function POST(request: Request) {
       const result = JSON.parse(cleanedContent);
       return NextResponse.json(result);
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('API调用错误:', error);
-    return NextResponse.json({ error: 'API调用失败', details: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'API调用失败', details: (error as Error).message }, { status: 500 });
   }
 }
