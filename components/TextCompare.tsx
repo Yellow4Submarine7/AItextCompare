@@ -343,6 +343,14 @@ export default function TextCompare() {
     setConsoleMessages([]);
   };
 
+  const clearAllTexts = () => {
+    setLeftText('');
+    setRightText('');
+    setLeftHighlights([]);
+    setRightHighlights([]);
+    setConsoleMessages([]);
+  };
+
   const escapeHtml = (text: string) => {
     return text.replace(/[&<>"']/g, (match) => {
       switch (match) {
@@ -360,14 +368,6 @@ export default function TextCompare() {
           return match;
       }
     });
-  };
-
-  const resetTexts = () => {
-    setLeftText(defaultLeftText);
-    setRightText(defaultRightText);
-    setLeftHighlights([]);
-    setRightHighlights([]);
-    setConsoleMessages([]);
   };
 
   useEffect(() => {
@@ -485,10 +485,10 @@ export default function TextCompare() {
             清空所有高亮
           </button>
           <button 
-            onClick={resetTexts}
+            onClick={clearAllTexts}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
           >
-            重置文本
+            清空文本
           </button>
         </div>
       </div>
