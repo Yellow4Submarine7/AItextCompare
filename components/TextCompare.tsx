@@ -108,12 +108,13 @@ export default function TextCompare() {
 
       for (let i = 0; i < words.length - selectedWords.length + 1; i++) {
         const subPhrase = words.slice(i, i + selectedWords.length).join(' ');
-        const score = calculateSimilarity(subPhrase, selectedText);
-        if (score > bestScore) {
-          bestScore = score;
-          bestStart = i;
-          bestEnd = i + selectedWords.length;
-        }
+        // 删除 calculateSimilarity 函数调用
+        // const score = calculateSimilarity(subPhrase, selectedText);
+        // if (score > bestScore) {
+        //     bestScore = score;
+        //     bestStart = i;
+        //     bestEnd = i + selectedWords.length;
+        // }
       }
 
       const refinedText = words.slice(bestStart, bestEnd).join(' ');
@@ -127,13 +128,6 @@ export default function TextCompare() {
     }
 
     return result;
-  };
-
-  const calculateSimilarity = (): number => { // 删除未使用的参数
-    // 实现一个简单的相似度计算函数
-    // 例如，可以使用 Levenshtein 距离或其他字符串相似度算法
-    // 这里仅作为示例，返回一个随机值
-    return Math.random();
   };
 
   // 使用模糊匹配在目标文本中查找相似文本的位置
