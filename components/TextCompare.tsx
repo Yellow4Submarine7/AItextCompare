@@ -155,9 +155,8 @@ export default function TextCompare() {
     const results = fuse.search(processedPattern);
 
     if (results.length > 0) {
-      const bestMatch = results[0];
-      // 由于我们只传入了整个文本，索引为 0
-      // 需要在原始文本中找到匹配的起始位置
+      // 删除未使用的 bestMatch 变量
+      // const bestMatch = results[0];
 
       // 使用字符串搜索来找到匹配的位置
       const index = text.indexOf(pattern);
