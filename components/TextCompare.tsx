@@ -478,22 +478,28 @@ export default function TextCompare() {
           <div key={side} className="w-1/2 relative h-96">
             <div 
               ref={side === 'left' ? leftBackdropRef : rightBackdropRef}
-              className="absolute inset-0 w-full h-full p-4 border rounded-lg whitespace-pre-wrap font-sans overflow-hidden" 
+              className="absolute inset-0 w-full h-full p-4 border rounded-lg whitespace-pre-wrap font-sans overflow-hidden break-words" 
               style={{ 
                 backgroundColor: 'white', 
                 zIndex: 1, 
                 pointerEvents: 'none',
                 wordWrap: 'break-word',
+                wordBreak: 'break-word',
+                overflowWrap: 'break-word',
+                whiteSpace: 'pre-wrap',
               }}
             ></div>
             <textarea
               ref={side === 'left' ? leftTextareaRef : rightTextareaRef}
-              className="absolute inset-0 w-full h-full p-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none font-sans overflow-auto"
+              className="absolute inset-0 w-full h-full p-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none font-sans overflow-auto break-words"
               style={{ 
                 color: 'transparent', // 使文本透明
                 caretColor: 'black',
                 backgroundColor: 'transparent',
                 zIndex: 2,
+                wordBreak: 'break-word',
+                overflowWrap: 'break-word',
+                whiteSpace: 'pre-wrap',
               }}
               value={side === 'left' ? leftText : rightText}
               onChange={(e) => handleTextChange(side as 'left' | 'right', e.target.value)}
