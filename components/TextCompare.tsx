@@ -170,6 +170,26 @@ export default function TextCompare() {
     return Array.from(text.slice(0, codeUnitIndex)).length;
   };
 
+  const scrollToHighlight = (side: 'left' | 'right', start: number, end: number) => {
+    const textareaRef = side === 'left' ? leftTextareaRef : rightTextareaRef;
+    const backdropRef = side === 'left' ? leftBackdropRef : rightBackdropRef;
+    
+    if (textareaRef.current && backdropRef.current) {
+      const textareaElement = textareaRef.current;
+      const backdropElement = backdropRef.current;
+      
+      // 计算高亮文本的位置
+      const textBeforeHighlight = (side === 'left' ? leftText : rightText).slice(0, start);
+      const lines = textBeforeHighlight.split('\n');
+      const lineHeight = 20; // 假设每行高度为20px，您可能需要根据实际情况调整这个值
+      const scrollPosition = lines.length * lineHeight;
+      
+      // 滚动到高亮位置
+      textareaElement.scrollTop = scrollPosition - textareaElement.clientHeight / 2;
+      backdropElement.scrollTop = textareaElement.scrollTop;
+    }
+  };
+
   const applyHighlight = async (side: 'left' | 'right') => {
     const textareaRef = side === 'left' ? leftTextareaRef : rightTextareaRef;
 
@@ -177,7 +197,6 @@ export default function TextCompare() {
       const selectionStart = textareaRef.current.selectionStart;
       const selectionEnd = textareaRef.current.selectionEnd;
 
-      // 将代码单元索引转换为字符索引
       const start = codeUnitIndexToCodePointIndex(
         side === 'left' ? leftText : rightText,
         selectionStart
@@ -197,17 +216,14 @@ export default function TextCompare() {
           const textArray = Array.from(side === 'left' ? leftText : rightText);
           const selectedText = textArray.slice(start, end).join('');
 
-          // 生成唯一的 id
           const newId = highlightCounter + 1;
           setHighlightCounter(newId);
 
           const newHighlight = { id: newId, start, end, color: selectedColor };
 
-          // 更新当前侧的高亮
           const setHighlights = side === 'left' ? setLeftHighlights : setRightHighlights;
           setHighlights(prev => [...prev, newHighlight]);
 
-          // 添加选中的文本到控制台
           setConsoleMessages(prev => [
             ...prev,
             {
@@ -219,16 +235,12 @@ export default function TextCompare() {
             },
           ]);
 
-          // 设置加载状态为 true
           setIsLoading(true);
 
-          // 查找并高亮另一侧的相似文本段
           const similarResult = await findSimilarSentence(side, selectedText);
 
-          // 请求完成后设置加载状态为 false
           setIsLoading(false);
 
-          // 添加 AI 请求和响应到控制台
           setConsoleMessages(prev => [
             ...prev,
             {
@@ -252,11 +264,9 @@ export default function TextCompare() {
             const setOtherHighlights = otherSide === 'left' ? setLeftHighlights : setRightHighlights;
             const targetText = otherSide === 'left' ? leftText : rightText;
 
-            // 使用 findSimilarTextPosition 找到相似文本的位置
             const { start: matchStart, end: matchEnd } = findSimilarTextPosition(targetText, similarResult.similar_text);
 
             if (matchStart !== -1 && matchEnd !== -1) {
-              // 生成唯一的 id
               const otherNewId = highlightCounter + 1;
               setHighlightCounter(otherNewId);
 
@@ -267,7 +277,6 @@ export default function TextCompare() {
                 color: selectedColor
               }]);
 
-              // 添加高亮的文本到控制台
               setConsoleMessages(prev => [...prev, {
                 type: 'highlighted',
                 side: otherSide,
@@ -277,16 +286,7 @@ export default function TextCompare() {
               }]);
 
               // 滚动到新高亮的位置
-              setTimeout(() => {
-                const backdropRef = otherSide === 'left' ? leftBackdropRef.current : rightBackdropRef.current;
-                if (backdropRef) {
-                  const highlightElements = backdropRef.querySelectorAll('mark');
-                  const lastHighlight = highlightElements[highlightElements.length - 1] as HTMLElement;
-                  if (lastHighlight) {
-                    lastHighlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  }
-                }
-              }, 0);
+              scrollToHighlight(otherSide, matchStart, matchEnd);
             } else {
               console.error('在目标文本中找到相似的文本段');
               setShowNotification(true);
@@ -294,7 +294,7 @@ export default function TextCompare() {
             }
           } else {
             setShowNotification(true);
-            setTimeout(() => setShowNotification(false), 3000); // 3秒后隐藏通知
+            setTimeout(() => setShowNotification(false), 3000);
           }
         }
       }
@@ -332,6 +332,15 @@ export default function TextCompare() {
           return match;
       }
     });
+  };
+
+  const handleScroll = (side: 'left' | 'right') => {
+    const textareaRef = side === 'left' ? leftTextareaRef : rightTextareaRef;
+    const backdropRef = side === 'left' ? leftBackdropRef : rightBackdropRef;
+    
+    if (textareaRef.current && backdropRef.current) {
+      backdropRef.current.scrollTop = textareaRef.current.scrollTop;
+    }
   };
 
   useEffect(() => {
@@ -469,7 +478,7 @@ export default function TextCompare() {
           <div key={side} className="w-1/2 relative h-96">
             <div 
               ref={side === 'left' ? leftBackdropRef : rightBackdropRef}
-              className="absolute inset-0 w-full h-full p-4 border rounded-lg whitespace-pre-wrap font-sans overflow-auto" 
+              className="absolute inset-0 w-full h-full p-4 border rounded-lg whitespace-pre-wrap font-sans overflow-hidden" 
               style={{ 
                 backgroundColor: 'white', 
                 zIndex: 1, 
@@ -479,9 +488,9 @@ export default function TextCompare() {
             ></div>
             <textarea
               ref={side === 'left' ? leftTextareaRef : rightTextareaRef}
-              className="absolute inset-0 w-full h-full p-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none font-sans"
+              className="absolute inset-0 w-full h-full p-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none font-sans overflow-auto"
               style={{ 
-                color: 'transparent',
+                color: 'transparent', // 使文本透明
                 caretColor: 'black',
                 backgroundColor: 'transparent',
                 zIndex: 2,
@@ -489,6 +498,7 @@ export default function TextCompare() {
               value={side === 'left' ? leftText : rightText}
               onChange={(e) => handleTextChange(side as 'left' | 'right', e.target.value)}
               onMouseUp={() => applyHighlight(side as 'left' | 'right')}
+              onScroll={() => handleScroll(side as 'left' | 'right')}
             />
           </div>
         ))}
