@@ -5,6 +5,8 @@ import { useState, useRef, useEffect } from 'react';
 import Fuse from 'fuse.js';
 import ColorPicker from './ColorPicker';
 import RunningCatIcon from './RunningCatIcon'; // 导入 RunningCatIcon 组件
+import Image from 'next/image';
+import { FaCoffee } from 'react-icons/fa';
 
 interface Highlight {
   id: number;
@@ -30,7 +32,7 @@ interface Match {
 
 export default function TextCompare() {
   const defaultLeftText = `在一个遥远的小村庄里，住着一位老木匠。他的手艺精湛，村里几乎所有的家具都出自他的手。一天天过去，他年纪越来越大，手也不再那么灵活了。有一天，一个年轻人来找他，想跟他学习木匠的技艺。老木匠看了看年轻人，问道："你为什么想学这门手艺？"年轻人回答道："因为我想和您一样，能创造出那么精美的家具。"老木匠笑了笑，说："手艺不仅是做东西，更是一种生活的态度。"于是，老木匠决定教他，年轻人从那天起，每天都到老木匠的作坊里学习。几年后，年轻人成为了村里最好的木匠，而老木匠则在看到年轻人的成就后，安心地退休了。`;
-  const defaultRightText = `在一个宁静偏远的小村庄里，住着一位技艺精湛的老木匠。他拥有无与伦比的技艺，村里几乎所有的家具都出自他的巧手。岁月流逝，他的年纪渐渐增长，曾经灵活的双手如今变得有些笨拙。
+  const defaultRightText = `在一个宁静偏远的小村庄里，住着一位技艺精湛的老木匠。他拥有无与伦比的技，村里几乎所有的家具都出自他的巧手。岁月流逝，他的年纪渐渐增长，曾经灵活的双手如今变得有些笨拙。
 
 一天，一位年轻人前来拜访，恳求能向他学习这门精湛的木匠技艺。老木匠端详着年轻人，平静地问："你为什么想学这门手艺？"
 
@@ -432,9 +434,9 @@ export default function TextCompare() {
   }, [leftText, rightText, leftHighlights, rightHighlights]);
 
   return (
-    <div className="flex flex-col space-y-4 font-sans p-4">
+    <div className="flex flex-col space-y-4 font-sans p-4 min-h-screen">
       {/* 控制栏：颜色选择器、按钮和小猫图标 */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-4">
         {/* 左侧：颜色选择器 */}
         <div className="flex-none">
           <ColorPicker 
@@ -473,7 +475,7 @@ export default function TextCompare() {
       )}
 
       {/* 文本对比区域 */}
-      <div className="flex space-x-4">
+      <div className="flex space-x-4 flex-grow">
         {['left', 'right'].map((side) => (
           <div key={side} className="w-1/2 relative h-96">
             <div 
@@ -510,24 +512,19 @@ export default function TextCompare() {
         ))}
       </div>
 
-      {/* 控制台部分 */}
-      <div className="mt-4 p-4 bg-gray-100 rounded-lg max-h-60 overflow-auto">
-        <h3 className="font-bold mb-2">控制台</h3>
-        {consoleMessages.map((message, index) => (
-          <div key={index} className="mb-2">
-            <span className="font-semibold">
-              {message.type === 'selected' 
-                ? '选中' 
-                : message.type === 'highlighted' 
-                  ? '高亮' 
-                  : message.type}:
-            </span>{' '}
-            <span>{message.text}</span>
-            {message.start !== 0 && message.end !== 0 && (
-              <span className="text-gray-500"> (开始: {message.start}, 结束: {message.end})</span>
-            )}
-          </div>
-        ))}
+      {/* 底部区域：二维码和 "Buy me a coffee" */}
+      <div className="mt-4 flex flex-col justify-center items-center space-y-4">
+        <Image 
+          src="/QR_code.jpg" 
+          alt="Donation QR Code" 
+          width={150} 
+          height={150}
+          className="rounded-lg shadow-md"
+        />
+        <div className="flex items-center space-x-2 text-lg font-medium text-gray-700">
+          <span>Buy me a coffee</span>
+          <FaCoffee className="text-brown-500" />
+        </div>
       </div>
     </div>
   );
