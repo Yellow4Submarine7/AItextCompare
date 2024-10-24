@@ -1,12 +1,12 @@
 // TextCompare.tsx
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import Fuse from 'fuse.js';
 import ColorPicker from './ColorPicker';
 import RunningCatIcon from './RunningCatIcon'; // 导入 RunningCatIcon 组件
 import Image from 'next/image';
-import { FaCoffee } from 'react-icons/fa';
+import { FaCoffee, FaLanguage } from 'react-icons/fa';
 
 interface Highlight {
   id: number;
@@ -32,7 +32,7 @@ interface Match {
 
 export default function TextCompare() {
   const defaultLeftText = `在一个遥远的小村庄里，住着一位老木匠。他的手艺精湛，村里几乎所有的家具都出自他的手。一天天过去，他年纪越来越大，手也不再那么灵活了。有一天，一个年轻人来找他，想跟他学习木匠的技艺。老木匠看了看年轻人，问道："你为什么想学这门手艺？"年轻人回答道："因为我想和您一样，能创造出那么精美的家具。"老木匠笑了笑，说："手艺不仅是做东西，更是一种生活的态度。"于是，老木匠决定教他，年轻人从那天起，每天都到老木匠的作坊里学习。几年后，年轻人成为了村里最好的木匠，而老木匠则在看到年轻人的成就后，安心地退休了。`;
-  const defaultRightText = `在一个宁静偏远的小村庄里，住着一位技艺精湛的老木匠。他拥有无与伦比的技，村里几乎所有的家具都出自他的巧手。岁月流逝，他的年纪渐渐增长，曾经灵活的双手如今变得有些笨拙。
+  const defaultRightText = `在一个宁静偏远的小村庄里，住着一位技艺精湛的老木匠。他拥有无与伦比的技，村里几乎所有的家具都出自他的巧手。岁月流逝，他的年纪渐渐增长，曾经灵活的双手如今得有些笨拙。
 
 一天，一位年轻人前来拜访，恳求能向他学习这门精湛的木匠技艺。老木匠端详着年轻人，平静地问："你为什么想学这门手艺？"
 
@@ -56,6 +56,7 @@ export default function TextCompare() {
   const [isClearMode, setIsClearMode] = useState(false);
   const [highlightCounter, setHighlightCounter] = useState(0); // 高亮计数器
   const [isLoading, setIsLoading] = useState(false); // 新增加载状态
+  const [isEnglish, setIsEnglish] = useState(false);
 
   const handleTextChange = (side: 'left' | 'right', value: string) => {
     if (side === 'left') {
@@ -180,7 +181,7 @@ export default function TextCompare() {
       const textareaElement = textareaRef.current;
       const backdropElement = backdropRef.current;
       
-      // 计算高亮文本的位置
+      // 计算高亮文的位置
       const textBeforeHighlight = (side === 'left' ? leftText : rightText).slice(0, start);
       const lines = textBeforeHighlight.split('\n');
       const lineHeight = 20; // 假设每行高度为20px，您可能需要根据实际情况调整这个值
@@ -290,7 +291,7 @@ export default function TextCompare() {
               // 滚动到新高亮的位置
               scrollToHighlight(otherSide, matchStart, matchEnd);
             } else {
-              console.error('在目标文本中找到相似的文本段');
+              console.error('在目标文本中找到相似文本段');
               setShowNotification(true);
               setTimeout(() => setShowNotification(false), 3000);
             }
@@ -343,6 +344,10 @@ export default function TextCompare() {
     if (textareaRef.current && backdropRef.current) {
       backdropRef.current.scrollTop = textareaRef.current.scrollTop;
     }
+  };
+
+  const toggleLanguage = () => {
+    setIsEnglish(!isEnglish);
   };
 
   useEffect(() => {
@@ -433,8 +438,27 @@ export default function TextCompare() {
     applyHighlights(rightText, rightHighlights, rightBackdropRef.current);
   }, [leftText, rightText, leftHighlights, rightHighlights]);
 
+  useEffect(() => {
+    // 修改网页标题
+    document.title = isEnglish ? "Chekie—Smart Compare" : "修改查查—智能对比";
+  }, [isEnglish]);
+
   return (
-    <div className="flex flex-col space-y-4 font-sans p-4 min-h-screen">
+    <div className="flex flex-col space-y-4 font-sans p-4 min-h-screen relative">
+      {/* 标题 */}
+      <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">
+        {isEnglish ? "Chekie—Smart Compare" : "修改查查—智能对比"}
+      </h1>
+
+      {/* 语言切换按钮 */}
+      <button
+        onClick={toggleLanguage}
+        className="absolute top-2 right-2 text-2xl text-gray-600 hover:text-gray-800"
+        aria-label={isEnglish ? "Switch to Chinese" : "切换到英文"}
+      >
+        <FaLanguage />
+      </button>
+
       {/* 控制栏：颜色选择器、按钮和小猫图标 */}
       <div className="flex justify-between items-center mb-4">
         {/* 左侧：颜色选择器 */}
@@ -448,7 +472,7 @@ export default function TextCompare() {
 
         {/* 中央：小猫图标 */}
         <div className="flex-1 flex justify-center">
-          <RunningCatIcon isRunning={isLoading} />
+          <RunningCatIcon isRunning={isLoading} isEnglish={isEnglish} />
         </div>
 
         {/* 右侧：按钮 */}
@@ -457,13 +481,13 @@ export default function TextCompare() {
             onClick={clearAllHighlights}
             className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
           >
-            清空所有高亮
+            {isEnglish ? "Clear All Highlights" : "清空所有高亮"}
           </button>
           <button 
             onClick={clearAllTexts}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
           >
-            清空文本
+            {isEnglish ? "Clear Text" : "清空文本"}
           </button>
         </div>
       </div>
